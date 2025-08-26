@@ -3,8 +3,12 @@ import { useState, useEffect } from 'react';
 import { PublicClientApplication } from '@azure/msal-browser';
 import { MsalProvider, useMsal, useIsAuthenticated } from '@azure/msal-react';
 import { callGraphApi } from './graphApi';
+import AdminComponents from './AdminComponents';
+
+const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
 // Use environment variables for Azure AD app registration values
+
 const msalConfig = {
   auth: {
     clientId: import.meta.env.VITE_AZURE_CLIENT_ID,
@@ -14,16 +18,17 @@ const msalConfig = {
 };
 const msalInstance = new PublicClientApplication(msalConfig);
 
-function Sidebar({ onLogout, isAuthenticated }) {
+function Sidebar({ onLogout, isAuthenticated, onNavigate, currentPage }) {
   return (
     <nav className="sidebar">
       <h2>Assistant</h2>
       <ul>
-        <li>Dashboard</li>
+        <li><button onClick={() => onNavigate('dashboard')} style={{ fontWeight: currentPage === 'dashboard' ? 'bold' : 'normal' }}>Dashboard</button></li>
         <li>Email</li>
         <li>Calendar</li>
         <li>Files</li>
         <li>AI Chat</li>
+        <li><button onClick={() => onNavigate('admin')} style={{ fontWeight: currentPage === 'admin' ? 'bold' : 'normal' }}>Admin</button></li>
       </ul>
       {isAuthenticated && (
         <button onClick={onLogout} style={{ marginTop: '2rem' }}>Logout</button>
@@ -32,7 +37,7 @@ function Sidebar({ onLogout, isAuthenticated }) {
   );
 }
 
-function Dashboard({ accessToken }) {
+function Dashboard({ accessToken, mock }) {
   const [emails, setEmails] = useState([]);
   const [events, setEvents] = useState([]);
   const [files, setFiles] = useState([]);
@@ -40,6 +45,19 @@ function Dashboard({ accessToken }) {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    if (mock) {
+      setEmails([
+        { from: { emailAddress: { name: 'Demo User' } }, subject: 'Welcome!', bodyPreview: 'This is a demo email.' },
+      ]);
+      setEvents([
+        { start: { dateTime: '2025-08-26T09:00:00' }, subject: 'Demo Event' },
+      ]);
+      setFiles([
+        { name: 'demo.txt', lastModifiedDateTime: '2025-08-25T12:00:00' },
+      ]);
+      setLoading(false);
+      return;
+    }
     if (!accessToken) return;
     setLoading(true);
     Promise.all([
@@ -57,9 +75,9 @@ function Dashboard({ accessToken }) {
         setError('Failed to fetch data from Microsoft 365.');
         setLoading(false);
       });
-  }, [accessToken]);
+  }, [accessToken, mock]);
 
-  if (!accessToken) return <div>Please sign in to view your dashboard.</div>;
+  if (!accessToken && !mock) return <div>Please sign in to view your dashboard.</div>;
   if (loading) return <div>Loading data...</div>;
   if (error) return <div style={{ color: 'red' }}>{error}</div>;
 
@@ -101,13 +119,16 @@ function Dashboard({ accessToken }) {
 }
 
 
-function AuthenticatedApp() {
+function AuthenticatedApp({ mock }) {
+  const [page, setPage] = useState('dashboard');
+  // Move hooks to the top level, before any conditional returns
   const { instance, accounts } = useMsal();
   const isAuthenticated = useIsAuthenticated();
   const [accessToken, setAccessToken] = useState(null);
   const [ssoTried, setSsoTried] = useState(false);
 
   useEffect(() => {
+    if (mock) return; // Don't run effect in mock mode
     // Try SSO on load if not authenticated
     if (!isAuthenticated && !ssoTried) {
       const ssoRequest = {
@@ -132,7 +153,26 @@ function AuthenticatedApp() {
       .catch(() => {
         instance.acquireTokenPopup(request).then((res) => setAccessToken(res.accessToken));
       });
-  }, [isAuthenticated, accounts, instance, ssoTried]);
+  }, [isAuthenticated, accounts, instance, ssoTried, mock]);
+
+  if (mock) {
+    // Localhost: skip auth, show dashboard as signed in
+    return (
+      <div className="container">
+        <Sidebar isAuthenticated={true} onNavigate={setPage} currentPage={page} />
+        <main>
+          {page === 'admin' ? (
+            <AdminComponents />
+          ) : (
+            <>
+              <h1>Personal Assistant Dashboard (Dev Mode)</h1>
+              <Dashboard accessToken={null} mock={true} />
+            </>
+          )}
+        </main>
+      </div>
+    );
+  }
 
   const handleLogout = () => {
     instance.logoutPopup();
@@ -140,39 +180,75 @@ function AuthenticatedApp() {
 
   return (
     <div className="container">
-      <Sidebar onLogout={handleLogout} isAuthenticated={isAuthenticated} />
+      <Sidebar onLogout={handleLogout} isAuthenticated={isAuthenticated} onNavigate={setPage} currentPage={page} />
       <main>
-        <h1>Personal Assistant Dashboard</h1>
-        <Dashboard accessToken={accessToken} />
+        {page === 'admin' ? (
+          <AdminComponents />
+        ) : (
+          <>
+            <h1>Personal Assistant Dashboard</h1>
+            <Dashboard accessToken={accessToken} mock={false} />
+          </>
+        )}
       </main>
     </div>
   );
 }
 
-function UnauthenticatedApp() {
+  const [page, setPage] = useState('dashboard');
   const { instance } = useMsal();
+  if (mock) {
+    // Localhost: skip auth, show dashboard as signed in
+    return (
+      <div className="container">
+        <Sidebar isAuthenticated={true} onNavigate={setPage} currentPage={page} />
+        <main>
+          {page === 'admin' ? (
+            <AdminComponents />
+          ) : (
+            <>
+              <h1>Personal Assistant Dashboard (Dev Mode)</h1>
+              <Dashboard accessToken={null} mock={true} />
+            </>
+          )}
+        </main>
+      </div>
+    );
+  }
   return (
     <div className="container">
-      <Sidebar isAuthenticated={false} />
+      <Sidebar isAuthenticated={false} onNavigate={setPage} currentPage={page} />
       <main>
-        <h1>Personal Assistant Dashboard</h1>
-        <button onClick={() => instance.loginPopup({ scopes: ['User.Read', 'Mail.Read', 'Calendars.Read', 'Files.Read'] })}>
-          Sign in with Microsoft 365
-        </button>
+        {page === 'admin' ? (
+          <AdminComponents />
+        ) : (
+          <>
+            <h1>Personal Assistant Dashboard</h1>
+            <button onClick={() => instance.loginPopup({ scopes: ['User.Read', 'Mail.Read', 'Calendars.Read', 'Files.Read'] })}>
+              Sign in with Microsoft 365
+            </button>
+          </>
+        )}
       </main>
     </div>
   );
 }
 
-function AppRoutes() {
+function AppRoutes({ mock }) {
   const isAuthenticated = useIsAuthenticated();
-  return isAuthenticated ? <AuthenticatedApp /> : <UnauthenticatedApp />;
+  // If localhost, always show as authenticated
+  if (mock) return <AuthenticatedApp mock={true} />;
+  return isAuthenticated ? <AuthenticatedApp mock={false} /> : <UnauthenticatedApp mock={false} />;
 }
 
 function App() {
+  if (isLocalhost) {
+    // Localhost: skip MSAL, show dashboard as signed in
+    return <AppRoutes mock={true} />;
+  }
   return (
     <MsalProvider instance={msalInstance}>
-      <AppRoutes />
+      <AppRoutes mock={false} />
     </MsalProvider>
   );
 }

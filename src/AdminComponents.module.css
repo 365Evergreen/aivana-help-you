@@ -1,0 +1,83 @@
+/* Label styles */
+.adminLabel {
+  display: block;
+  margin-bottom: 4px;
+}
+/* AdminComponents.module.css */
+.adminRoot {
+  padding: 32px;
+}
+.adminFlex {
+  display: flex;
+  gap: 32px;
+}
+.adminAside {
+  min-width: 200px;
+}
+.adminList {
+  list-style: none;
+  padding: 0;
+}
+.adminButton {
+  width: 100%;
+  text-align: left;
+  border: none;
+  padding: 8px;
+  cursor: pointer;
+  background: none;
+}
+.adminButtonSelected {
+  background: #e0e7ff;
+}
+.adminMain {
+  flex: 1;
+}
+.adminPreview {
+  border: 1px solid #eee;
+  padding: 24px;
+  border-radius: 8px;
+  background: #fafbfc;
+  min-height: 200px;
+}
+.adminTextarea {
+  width: 100%;
+  min-height: 120px;
+  font-family: monospace;
+  font-size: 14px;
+}
+.adminMarginTop {
+  margin-top: 16px;
+}
+.adminGray {
+  color: #888;
+  margin-left: 8px;
+}
+/* Layout templates */
+.singleColumn {
+  max-width: 800px;
+  margin: 0 auto;
+}
+.twoColumn {
+  display: flex;
+  gap: 32px;
+}
+.twoColumnMain {
+  flex: 1;
+}
+.twoColumnSidebar {
+  flex: 1;
+  background: #f6f6f6;
+  min-height: 400px;
+}
+.centeredCardWrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 80vh;
+}
+.centeredCard {
+  background: #fff;
+  padding: 32px;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px #0001;
+}
