@@ -138,7 +138,8 @@ function AuthenticatedApp({ mock }) {
       instance.ssoSilent(ssoRequest)
         .then((res) => setAccessToken(res.accessToken))
         .catch(() => {
-          // SSO failed, will require login
+          // SSO failed, automatically redirect to login
+          instance.loginRedirect(ssoRequest);
         })
         .finally(() => setSsoTried(true));
       return;
@@ -195,44 +196,6 @@ function AuthenticatedApp({ mock }) {
   );
 }
 
-  const [page, setPage] = useState('dashboard');
-  const { instance } = useMsal();
-  if (mock) {
-    // Localhost: skip auth, show dashboard as signed in
-    return (
-      <div className="container">
-        <Sidebar isAuthenticated={true} onNavigate={setPage} currentPage={page} />
-        <main>
-          {page === 'admin' ? (
-            <AdminComponents />
-          ) : (
-            <>
-              <h1>Personal Assistant Dashboard (Dev Mode)</h1>
-              <Dashboard accessToken={null} mock={true} />
-            </>
-          )}
-        </main>
-      </div>
-    );
-  }
-  return (
-    <div className="container">
-      <Sidebar isAuthenticated={false} onNavigate={setPage} currentPage={page} />
-      <main>
-        {page === 'admin' ? (
-          <AdminComponents />
-        ) : (
-          <>
-            <h1>Personal Assistant Dashboard</h1>
-            <button onClick={() => instance.loginPopup({ scopes: ['User.Read', 'Mail.Read', 'Calendars.Read', 'Files.Read'] })}>
-              Sign in with Microsoft 365
-            </button>
-          </>
-        )}
-      </main>
-    </div>
-  );
-}
 
 function AppRoutes({ mock }) {
   const isAuthenticated = useIsAuthenticated();
