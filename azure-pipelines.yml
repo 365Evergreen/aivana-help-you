@@ -1,0 +1,27 @@
+# Azure DevOps pipeline for React app deployment to Azure Static Web Apps
+# Replace <YOUR_STATIC_WEB_APP_NAME> with your actual Static Web App name
+# Resource group: Aivana
+
+trigger:
+  - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+  - task: NodeTool@0
+    inputs:
+      versionSpec: '18.x'
+    displayName: 'Install Node.js'
+
+  - script: |
+      npm install
+      npm run build
+    displayName: 'Install dependencies and build'
+
+  - task: AzureStaticWebApp@0
+    inputs:
+      app_location: "/"            # Location of your app source code
+      output_location: "dist"      # Build output folder
+      azure_static_web_apps_api_token: "$(deployment_token)" # Set this as a pipeline secret variable
+    displayName: 'Deploy to Azure Static Web Apps'
